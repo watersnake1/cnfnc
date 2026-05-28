@@ -128,8 +128,20 @@ async function main() {
   }, null, 2));
   console.log(`>>> Wrote merkle.json to ${MERKLE_PATH}`);
 
-  // ── 5. Post root on-chain ────────────────────────────────────────────────────
-  console.log(">>> Updating merkle root on NFTProver...");
+  // ── 5. Post root on-chain (skip if unchanged to save gas) ───────────────────
+  const onChainRoot = await publicClient.readContract({
+    address:      nftProverAddr,
+    abi:          [{ name: "merkleRoot", type: "function", inputs: [], outputs: [{ type: "uint256" }], stateMutability: "view" }] as const,
+    functionName: "merkleRoot",
+  }) as bigint;
+
+  if (onChainRoot === root) {
+    console.log(">>> Root unchanged — skipping setMerkleRoot.");
+    console.log("Done.");
+    return;
+  }
+
+  console.log(">>> Root changed — updating NFTProver on-chain...");
   const txHash = await walletClient.writeContract({
     address:      nftProverAddr,
     abi:          [{ name: "setMerkleRoot", type: "function", inputs: [{ name: "_newRoot", type: "uint256" }], outputs: [], stateMutability: "nonpayable" }] as const,
