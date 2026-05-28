@@ -1,16 +1,19 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { http } from "wagmi";
-import { anvil } from "wagmi/chains";
+import { anvil, sepolia } from "wagmi/chains";
+
+const isSepolia = import.meta.env.VITE_CHAIN === "sepolia";
+const chain     = isSepolia ? sepolia : anvil;
+const rpcUrl    = isSepolia
+  ? import.meta.env.VITE_SEPOLIA_RPC_URL
+  : "http://127.0.0.1:8545";
 
 export const wagmiConfig = getDefaultConfig({
   appName: "NFT Ownership Prover",
-  projectId: "cnfnc-dev",
-  chains: [anvil],
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "cnfnc-dev",
+  chains: [chain],
   transports: {
-    // Force all RPC through local anvil — without this, getDefaultConfig routes
-    // receipt polling through WalletConnect's public infra, which never sees
-    // transactions on a local chain.
-    [anvil.id]: http("http://127.0.0.1:8545"),
+    [chain.id]: http(rpcUrl),
   },
   ssr: false,
 });

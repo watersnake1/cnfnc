@@ -15,7 +15,7 @@
  */
 import { createPublicClient, createWalletClient, http, parseAbiItem, type Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { anvil } from "viem/chains";
+import { anvil, sepolia } from "viem/chains";
 import { buildPoseidon } from "circomlibjs";
 import { readFileSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
@@ -47,8 +47,14 @@ async function main() {
     ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80") as `0x${string}`;
   const account = privateKeyToAccount(privateKey);
 
-  const publicClient = createPublicClient({ chain: anvil, transport: http() });
-  const walletClient = createWalletClient({ account, chain: anvil, transport: http() });
+  // Select chain and RPC from environment. Falls back to local anvil for dev.
+  const chainId  = Number(deployments.chainId);
+  const chain    = chainId === sepolia.id ? sepolia : anvil;
+  const rpcUrl   = process.env.SEPOLIA_RPC_URL ?? process.env.RPC_URL;
+  const transport = rpcUrl ? http(rpcUrl) : http();
+
+  const publicClient = createPublicClient({ chain, transport });
+  const walletClient = createWalletClient({ account, chain, transport });
 
   // ── 1. Fetch current NFT holders ────────────────────────────────────────────
   console.log(">>> Fetching NFT holders...");
@@ -129,6 +135,8 @@ async function main() {
     abi:          [{ name: "setMerkleRoot", type: "function", inputs: [{ name: "_newRoot", type: "uint256" }], outputs: [], stateMutability: "nonpayable" }] as const,
     functionName: "setMerkleRoot",
     args:         [root],
+    chain,
+    account,
   });
   await publicClient.waitForTransactionReceipt({ hash: txHash });
   console.log(`>>> setMerkleRoot tx: ${txHash}`);
