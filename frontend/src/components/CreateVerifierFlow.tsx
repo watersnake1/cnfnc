@@ -57,7 +57,7 @@ export function CreateVerifierFlow({ onDeployed }: Props) {
               disabled={!isAddress(input)}
               onClick={handleCheck}
             >
-              Check
+              Submit
             </button>
           </div>
         </label>
