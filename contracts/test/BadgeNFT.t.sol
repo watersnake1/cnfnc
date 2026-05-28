@@ -14,7 +14,7 @@ contract BadgeNFTTest is Test {
     address bob    = makeAddr("bob");
 
     function setUp() public {
-        nft   = new MockNFT();
+        nft   = new MockNFT("Test Collection", "TEST");
         badge = new BadgeNFT(address(nft));
         badge.setProver(prover);
     }

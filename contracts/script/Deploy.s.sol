@@ -14,7 +14,7 @@ contract Deploy is Script {
 
         vm.startBroadcast(deployerKey);
 
-        MockNFT mockNFT = new MockNFT();
+        MockNFT mockNFT = new MockNFT("Mock Collection X", "MCX");
         mockNFT.mint(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
 
         Groth16Verifier  verifier = new Groth16Verifier();

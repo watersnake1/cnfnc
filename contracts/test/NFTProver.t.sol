@@ -33,7 +33,7 @@ contract NFTProverTest is Test {
     uint256[3]    pubSignals;
 
     function setUp() public {
-        nft      = new MockNFT();
+        nft      = new MockNFT("Test Collection", "TEST");
         verifier = new MockVerifier();
         badge    = new BadgeNFT(address(nft));
         prover   = new NFTProver(address(verifier), address(badge), MERKLE_ROOT, address(nft));
