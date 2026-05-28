@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { ProverFlow }   from "./components/ProverFlow";
-import { VerifierFlow } from "./components/VerifierFlow";
+import { type Address } from "viem";
+import { ProverFlow }          from "./components/ProverFlow";
+import { VerifierFlow }        from "./components/VerifierFlow";
+import { ExploreFlow }         from "./components/ExploreFlow";
+import { CreateVerifierFlow }  from "./components/CreateVerifierFlow";
 
-type Tab = "prove" | "verify";
+type Tab = "prove" | "explore" | "create" | "verify";
 
 function Balloon({
   color, size = 40, delay = "0s",
@@ -57,8 +60,26 @@ const BG_BALLOONS: Array<{
   { left:  "83%", bottom: "38%", color: "#fca5a5", size: 36, duration: "9s",   delay: "6.2s",  sway: "bgBalloon2" },
 ];
 
+const TAB_LABELS: Record<Tab, string> = {
+  prove:   "🎈 Prove Ownership",
+  explore: "Explore",
+  create:  "Create Verifier",
+  verify:  "Verify Claim",
+};
+
 export default function App() {
   const [tab, setTab] = useState<Tab>("prove");
+  const [selectedCollection, setSelectedCollection] = useState<Address | undefined>();
+
+  const handleSelectCollection = (collection: Address) => {
+    setSelectedCollection(collection);
+    setTab("prove");
+  };
+
+  const handleTabChange = (t: Tab) => {
+    setTab(t);
+    if (t !== "prove") setSelectedCollection(undefined);
+  };
 
   return (
     <>
@@ -124,21 +145,29 @@ export default function App() {
             <ConnectButton />
           </div>
           <nav style={styles.nav}>
-            {(["prove", "verify"] as Tab[]).map(t => (
+            {(["prove", "explore", "create", "verify"] as Tab[]).map(t => (
               <button
                 key={t}
                 style={{ ...styles.tabBtn, ...(tab === t ? styles.tabActive : {}) }}
-                onClick={() => setTab(t)}
+                onClick={() => handleTabChange(t)}
               >
-                {t === "prove" ? "🎈 Prove Ownership" : "Verify Claim"}
+                {TAB_LABELS[t]}
               </button>
             ))}
           </nav>
         </header>
 
         <main style={styles.main}>
-          <div style={{ display: tab === "prove"  ? "block" : "none" }}><ProverFlow /></div>
-          <div style={{ display: tab === "verify" ? "block" : "none" }}><VerifierFlow /></div>
+          <div style={{ display: tab === "prove"   ? "block" : "none" }}>
+            <ProverFlow key={selectedCollection ?? "default"} initialCollection={selectedCollection} />
+          </div>
+          <div style={{ display: tab === "explore" ? "block" : "none" }}>
+            <ExploreFlow onSelectCollection={handleSelectCollection} />
+          </div>
+          <div style={{ display: tab === "create"  ? "block" : "none" }}>
+            <CreateVerifierFlow onDeployed={() => setTab("explore")} />
+          </div>
+          <div style={{ display: tab === "verify"  ? "block" : "none" }}><VerifierFlow /></div>
 
           <section style={styles.about}>
             <h3 style={styles.aboutHeading}>What does NFNC do?</h3>

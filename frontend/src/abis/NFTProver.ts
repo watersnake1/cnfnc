@@ -33,6 +33,13 @@ export const NFTProverABI = [
     outputs: [{ name: "", type: "uint256" }],
   },
   {
+    name: "nftCollection",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
     name: "BadgeMinted",
     type: "event",
     inputs: [

@@ -1,42 +1,37 @@
-/**
- * Client-side merkle tree utilities.
- * Loads the pre-built tree from /circuits/merkle.json (output of scripts/update-merkle.ts).
- */
-
-export interface MerkleData {
+export interface CollectionMerkleData {
   root: string;
   depth: number;
   holders: string[];
-  proofs: Record<
-    string,
-    { path: string[]; indices: number[] }
-  >;
+  proofs: Record<string, { path: string[]; indices: number[] }>;
 }
 
-let cachedMerkle: MerkleData | null = null;
+type MerkleFile = Record<string, CollectionMerkleData>;
 
-export async function loadMerkleData(): Promise<MerkleData> {
-  if (cachedMerkle) return cachedMerkle;
+let cached: MerkleFile | null = null;
+
+async function load(): Promise<MerkleFile> {
+  if (cached) return cached;
   const res = await fetch("/circuits/merkle.json");
   if (!res.ok) throw new Error("merkle.json not found — run scripts/update-merkle.ts first");
-  cachedMerkle = await res.json() as MerkleData;
-  return cachedMerkle;
+  cached = await res.json() as MerkleFile;
+  return cached;
 }
 
 export async function getMerkleProof(
-  address: string
+  walletAddress: string,
+  collection: string,
 ): Promise<{ path: bigint[]; indices: number[] }> {
-  const data   = await loadMerkleData();
-  const addr   = address.toLowerCase();
-  const proof  = data.proofs[addr];
-  if (!proof) throw new Error(`${addr} is not in the NFT-holder merkle tree`);
-  return {
-    path:    proof.path.map(BigInt),
-    indices: proof.indices,
-  };
+  const data = await load();
+  const tree = data[collection.toLowerCase()];
+  if (!tree) throw new Error(`No merkle tree for collection ${collection} — run update-merkle.ts`);
+  const proof = tree.proofs[walletAddress.toLowerCase()];
+  if (!proof) throw new Error(`${walletAddress} is not in the merkle tree for ${collection}`);
+  return { path: proof.path.map(BigInt), indices: proof.indices };
 }
 
-export async function getMerkleRoot(): Promise<bigint> {
-  const data = await loadMerkleData();
-  return BigInt(data.root);
+export async function getMerkleRoot(collection: string): Promise<bigint> {
+  const data = await load();
+  const tree = data[collection.toLowerCase()];
+  if (!tree) throw new Error(`No merkle tree for collection ${collection}`);
+  return BigInt(tree.root);
 }
