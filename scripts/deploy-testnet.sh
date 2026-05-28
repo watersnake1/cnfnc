@@ -38,7 +38,7 @@ echo ""
 echo "==> [2/3] Building merkle tree and updating on-chain root..."
 cd "$SCRIPT_DIR"
 
-SEPOLIA_RPC_URL="$SEPOLIA_RPC_URL" PRIVATE_KEY="$PRIVATE_KEY" tsx update-merkle.ts
+SEPOLIA_RPC_URL="$SEPOLIA_RPC_URL" PRIVATE_KEY="$PRIVATE_KEY" npx tsx update-merkle.ts
 
 echo ""
 
