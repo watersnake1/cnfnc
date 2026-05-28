@@ -96,9 +96,10 @@ async function main() {
   const rpcUrl        = process.env.SEPOLIA_RPC_URL ?? process.env.RPC_URL;
   const transport     = rpcUrl ? http(rpcUrl) : http();
 
-  const privateKey = (process.env.PRIVATE_KEY
-    ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80") as `0x${string}`;
-  const account      = privateKeyToAccount(privateKey);
+  const rawKey   = process.env.PRIVATE_KEY
+    ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  const privateKey = (rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`) as `0x${string}`;
+  const account  = privateKeyToAccount(privateKey);
   const publicClient = createPublicClient({ chain, transport });
   const walletClient = createWalletClient({ account, chain, transport });
 
