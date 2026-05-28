@@ -139,6 +139,19 @@ export default function App() {
         <main style={styles.main}>
           <div style={{ display: tab === "prove"  ? "block" : "none" }}><ProverFlow /></div>
           <div style={{ display: tab === "verify" ? "block" : "none" }}><VerifierFlow /></div>
+
+          <section style={styles.about}>
+            <h3 style={styles.aboutHeading}>What does NFNC do?</h3>
+            <p style={styles.aboutText}>
+              A user wants to prove that they own an NFT of collection C in one of their wallets.
+              But they do not want others to know what this wallet is, or which of the collection
+              they own. This user only wants to prove membership in the set of all C NFTs. To do
+              this, they use this tool to generate a zk proof in-browser that attests to their
+              membership in this collection C. Then, a new badge NFT is minted to a different
+              public wallet the user controls, which can then be used to prove they indeed own
+              the NFT.
+            </p>
+          </section>
         </main>
       </div>
     </>
@@ -157,4 +170,7 @@ const styles = {
   tabBtn:      { background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: 14, fontWeight: 500, padding: "10px 16px", borderBottom: "2px solid transparent" } as React.CSSProperties,
   tabActive:   { color: "#dc2626", borderBottomColor: "#dc2626" } as React.CSSProperties,
   main:        { flex: 1, position: "relative", zIndex: 1 } as React.CSSProperties,
+  about:       { maxWidth: 600, margin: "48px auto 64px", padding: "0 24px", textAlign: "center" } as React.CSSProperties,
+  aboutHeading:{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 12 } as React.CSSProperties,
+  aboutText:   { fontSize: 14, color: "#6b7280", lineHeight: 1.8, margin: 0 } as React.CSSProperties,
 } satisfies Record<string, React.CSSProperties>;
