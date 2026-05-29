@@ -5,18 +5,17 @@ import { generateProof, toContractArgs, type GrothProof } from "../lib/prover";
 import { getMerkleProof, getMerkleRoot } from "../lib/merkle";
 import { nullifierHash } from "../lib/poseidon";
 import { NFTProverABI } from "../abis/NFTProver";
-import deployments from "../deployments.json";
 
 export type ProverStep =
   | "idle"
   | "generating"
-  | "ready"          // proof generated, waiting to connect wallet_B
-  | "confirming"     // waiting for wallet popup approval
-  | "mining"         // tx submitted, waiting for on-chain confirmation
+  | "ready"
+  | "confirming"
+  | "mining"
   | "done"
   | "error";
 
-export function useProver() {
+export function useProver(proverAddress: Address | undefined) {
   const { address } = useAccount();
   const publicClient = usePublicClient();
 
@@ -29,7 +28,7 @@ export function useProver() {
   const { writeContractAsync } = useWriteContract();
 
   const generateAndStoreProof = useCallback(
-    async (walletBAddress: Address) => {
+    async (walletBAddress: Address, collection: Address) => {
       if (!address) return;
       setStep("generating");
       setError(null);
@@ -39,8 +38,8 @@ export function useProver() {
         const walletBField = BigInt(walletBAddress);
 
         const [{ path, indices }, merkleRoot, nullifier] = await Promise.all([
-          getMerkleProof(address),
-          getMerkleRoot(),
+          getMerkleProof(address, collection),
+          getMerkleRoot(collection),
           nullifierHash(walletAField),
         ]);
 
@@ -63,27 +62,24 @@ export function useProver() {
     [address]
   );
 
-  const mintBadge = useCallback(async () => {
-    if (!proof || !address || !publicClient) return;
+  const mintBadge = useCallback(async (collection: Address) => {
+    if (!proof || !address || !publicClient || !proverAddress) return;
     setError(null);
 
     try {
-      // Pre-flight 1: verify on-chain merkle root matches the tree used to generate the proof
       const onChainRoot = await publicClient.readContract({
-        address:      deployments.nftProver as Address,
+        address:      proverAddress,
         abi:          NFTProverABI,
         functionName: "merkleRoot",
       }) as bigint;
-      const localRoot = await getMerkleRoot();
+      const localRoot = await getMerkleRoot(collection);
       if (onChainRoot !== localRoot) {
         throw new Error(
-          `On-chain merkle root (${onChainRoot}) does not match merkle.json (${localRoot}). ` +
+          `On-chain merkle root does not match local tree for this collection. ` +
           `Run: tsx scripts/update-merkle.ts`
         );
       }
 
-      // Pre-flight 2: simulate the call so any revert (InvalidProof, NullifierAlreadyUsed…)
-      // surfaces as a readable error before the wallet popup ever opens.
       const { pA, pB, pC, pubSignals } = toContractArgs(proof);
       const mintArgs = [
         pA         as [bigint, bigint],
@@ -93,7 +89,7 @@ export function useProver() {
       ] as const;
 
       await publicClient.simulateContract({
-        address:      deployments.nftProver as Address,
+        address:      proverAddress,
         abi:          NFTProverABI,
         functionName: "mint",
         args:         mintArgs,
@@ -102,7 +98,7 @@ export function useProver() {
 
       setStep("confirming");
       const hash = await writeContractAsync({
-        address:      deployments.nftProver as Address,
+        address:      proverAddress,
         abi:          NFTProverABI,
         functionName: "mint",
         args:         mintArgs,
@@ -111,15 +107,13 @@ export function useProver() {
       setTxHash(hash);
       setStep("mining");
 
-      // Await the receipt directly — no hook needed. The ProverFlow component stays
-      // mounted (CSS display:none on the tab) so this callback is never dropped.
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       setTxHash(undefined);
       if (receipt.status === "reverted") {
         setError("Transaction reverted — proof may be invalid or nullifier already used.");
         setStep("error");
       } else {
-        setTokenId(receipt.logs.length > 0 ? 0n : 0n);
+        setTokenId(0n);
         setStep("done");
       }
     } catch (err) {
@@ -127,10 +121,9 @@ export function useProver() {
       setError(err instanceof Error ? err.message : String(err));
       setStep("error");
     }
-  }, [proof, address, writeContractAsync, publicClient]);
+  }, [proof, address, writeContractAsync, publicClient, proverAddress]);
 
   const cancelMint = useCallback(() => {
-    // Back to connect-B without losing the proof — no need to regenerate
     setStep("ready");
     setError(null);
     setTxHash(undefined);

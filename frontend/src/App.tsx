@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { ProverFlow }   from "./components/ProverFlow";
-import { VerifierFlow } from "./components/VerifierFlow";
+import { type Address } from "viem";
+import { ProverFlow }          from "./components/ProverFlow";
+import { VerifierFlow }        from "./components/VerifierFlow";
+import { ExploreFlow }         from "./components/ExploreFlow";
+import { CreateVerifierFlow }  from "./components/CreateVerifierFlow";
 
-type Tab = "prove" | "verify";
+type Tab = "prove" | "explore" | "create" | "verify";
 
 function Balloon({
   color, size = 40, delay = "0s",
@@ -57,8 +60,26 @@ const BG_BALLOONS: Array<{
   { left:  "83%", bottom: "38%", color: "#fca5a5", size: 36, duration: "9s",   delay: "6.2s",  sway: "bgBalloon2" },
 ];
 
+const TAB_LABELS: Record<Tab, string> = {
+  prove:   "🎈 Prove Ownership",
+  explore: "Explore",
+  create:  "Create Verifier",
+  verify:  "Verify Claim",
+};
+
 export default function App() {
   const [tab, setTab] = useState<Tab>("prove");
+  const [selectedCollection, setSelectedCollection] = useState<Address | undefined>();
+
+  const handleSelectCollection = (collection: Address) => {
+    setSelectedCollection(collection);
+    setTab("prove");
+  };
+
+  const handleTabChange = (t: Tab) => {
+    setTab(t);
+    if (t !== "prove") setSelectedCollection(undefined);
+  };
 
   return (
     <>
@@ -124,21 +145,29 @@ export default function App() {
             <ConnectButton />
           </div>
           <nav style={styles.nav}>
-            {(["prove", "verify"] as Tab[]).map(t => (
+            {(["prove", "explore", "create", "verify"] as Tab[]).map(t => (
               <button
                 key={t}
                 style={{ ...styles.tabBtn, ...(tab === t ? styles.tabActive : {}) }}
-                onClick={() => setTab(t)}
+                onClick={() => handleTabChange(t)}
               >
-                {t === "prove" ? "🎈 Prove Ownership" : "Verify Claim"}
+                {TAB_LABELS[t]}
               </button>
             ))}
           </nav>
         </header>
 
         <main style={styles.main}>
-          <div style={{ display: tab === "prove"  ? "block" : "none" }}><ProverFlow /></div>
-          <div style={{ display: tab === "verify" ? "block" : "none" }}><VerifierFlow /></div>
+          <div style={{ display: tab === "prove"   ? "block" : "none" }}>
+            <ProverFlow key={selectedCollection ?? "default"} initialCollection={selectedCollection} />
+          </div>
+          <div style={{ display: tab === "explore" ? "block" : "none" }}>
+            <ExploreFlow onSelectCollection={handleSelectCollection} />
+          </div>
+          <div style={{ display: tab === "create"  ? "block" : "none" }}>
+            <CreateVerifierFlow onDeployed={() => setTab("explore")} />
+          </div>
+          <div style={{ display: tab === "verify"  ? "block" : "none" }}><VerifierFlow /></div>
 
           <section style={styles.about}>
             <h3 style={styles.aboutHeading}>What does NFNC do?</h3>
@@ -167,8 +196,8 @@ const styles = {
   title:       { fontSize: 22, fontWeight: 800, margin: 0, color: "#111827", letterSpacing: "-0.5px" } as React.CSSProperties,
   tagline:     { fontSize: 12, color: "#9ca3af", margin: "2px 0 0" } as React.CSSProperties,
   nav:         { display: "flex", gap: 4 } as React.CSSProperties,
-  tabBtn:      { background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: 14, fontWeight: 500, padding: "10px 16px", borderBottom: "2px solid transparent" } as React.CSSProperties,
-  tabActive:   { color: "#dc2626", borderBottomColor: "#dc2626" } as React.CSSProperties,
+  tabBtn:      { background: "none", borderTop: "none", borderLeft: "none", borderRight: "none", borderBottom: "2px solid transparent", color: "#9ca3af", cursor: "pointer", fontSize: 14, fontWeight: 500, padding: "10px 16px", outline: "none" } as React.CSSProperties,
+  tabActive:   { color: "#dc2626", borderBottom: "2px solid #dc2626" } as React.CSSProperties,
   main:        { flex: 1, position: "relative", zIndex: 1 } as React.CSSProperties,
   about:       { maxWidth: 600, margin: "48px auto 64px", padding: "0 24px", textAlign: "center" } as React.CSSProperties,
   aboutHeading:{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 12 } as React.CSSProperties,

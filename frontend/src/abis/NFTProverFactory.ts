@@ -1,0 +1,66 @@
+export const NFTProverFactoryABI = [
+  {
+    name: "deployProver",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs:  [{ name: "nftCollection", type: "address" }],
+    outputs: [{ name: "nftProver", type: "address" }, { name: "badgeNFT", type: "address" }],
+  },
+  {
+    name: "setMerkleRoot",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs:  [{ name: "nftCollection", type: "address" }, { name: "newRoot", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    name: "getDeployments",
+    type: "function",
+    stateMutability: "view",
+    inputs:  [],
+    outputs: [{
+      name: "",
+      type: "tuple[]",
+      components: [
+        { name: "nftCollection",   type: "address" },
+        { name: "nftProver",       type: "address" },
+        { name: "badgeNFT",        type: "address" },
+        { name: "deployer",        type: "address" },
+        { name: "deployedAtBlock", type: "uint256" },
+      ],
+    }],
+  },
+  {
+    name: "getDeploymentCount",
+    type: "function",
+    stateMutability: "view",
+    inputs:  [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "collectionToProver",
+    type: "function",
+    stateMutability: "view",
+    inputs:  [{ name: "nftCollection", type: "address" }],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    name: "verifier",
+    type: "function",
+    stateMutability: "view",
+    inputs:  [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    name: "ProverDeployed",
+    type: "event",
+    inputs: [
+      { name: "nftCollection", type: "address", indexed: true },
+      { name: "nftProver",     type: "address", indexed: true },
+      { name: "badgeNFT",      type: "address", indexed: true },
+      { name: "deployer",      type: "address", indexed: false },
+    ],
+  },
+  { name: "AlreadyDeployed",          type: "error", inputs: [] },
+  { name: "CollectionNotRegistered",  type: "error", inputs: [] },
+] as const;

@@ -1,15 +1,14 @@
 import { useReadContract } from "wagmi";
 import { type Address } from "viem";
-import { MockNFTABI } from "../abis/MockNFT";
-import deployments from "../deployments.json";
+import { ERC721ABI } from "../abis/ERC721";
 
-export function useNFTCheck(address: Address | undefined) {
+export function useNFTCheck(wallet: Address | undefined, collection: Address | undefined) {
   const { data, isLoading, error } = useReadContract({
-    address: deployments.mockNFT as Address,
-    abi:     MockNFTABI,
+    address: collection,
+    abi:     ERC721ABI,
     functionName: "balanceOf",
-    args:    address ? [address] : undefined,
-    query:   { enabled: !!address },
+    args:    wallet ? [wallet] : undefined,
+    query:   { enabled: !!wallet && !!collection },
   });
 
   return {
