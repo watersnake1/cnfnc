@@ -96,8 +96,11 @@ async function main() {
   const rpcUrl        = process.env.SEPOLIA_RPC_URL ?? process.env.RPC_URL;
   const transport     = rpcUrl ? http(rpcUrl) : http();
 
-  const rawKey   = process.env.PRIVATE_KEY
-    ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  const rawKey = process.env.PRIVATE_KEY
+    || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  if (!process.env.PRIVATE_KEY && chain.id !== anvil.id) {
+    throw new Error("PRIVATE_KEY is not set — required for non-local deployments");
+  }
   const privateKey = (rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`) as `0x${string}`;
   const account  = privateKeyToAccount(privateKey);
   const publicClient = createPublicClient({ chain, transport });
