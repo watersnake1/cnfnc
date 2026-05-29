@@ -88,13 +88,31 @@ const PROVER_ABI = [
   { name: "merkleRoot", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 ] as const;
 
+const TRANSFER_EVENT = parseAbiItem(
+  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
+);
+
+// Most public RPC endpoints cap eth_getLogs at 10k blocks per request.
+const LOG_CHUNK = 9_000n;
+
+async function fetchAllTransferLogs(publicClient: ReturnType<typeof createPublicClient>, address: Address) {
+  const latest = await publicClient.getBlockNumber();
+  const all: Array<{ args: { from: string; to: string; tokenId: bigint } }> = [];
+  for (let from = 0n; from <= latest; from += LOG_CHUNK) {
+    const to  = from + LOG_CHUNK - 1n < latest ? from + LOG_CHUNK - 1n : latest;
+    const chunk = await publicClient.getLogs({ address, event: TRANSFER_EVENT, fromBlock: from, toBlock: to });
+    for (const log of chunk) all.push(log as never);
+  }
+  return all;
+}
+
 async function main() {
   const deployments   = JSON.parse(readFileSync(DEPLOY_PATH, "utf-8"));
   const factoryAddr   = deployments.factory as Address;
   const chainId       = Number(deployments.chainId);
   const chain         = chainId === sepolia.id ? sepolia : anvil;
-  const rpcUrl        = process.env.SEPOLIA_RPC_URL ?? process.env.RPC_URL;
-  const transport     = rpcUrl ? http(rpcUrl) : http();
+  const rpcUrl    = process.env.SEPOLIA_RPC_URL || process.env.RPC_URL;
+  const transport = rpcUrl ? http(rpcUrl) : http();
 
   const rawKey = process.env.PRIVATE_KEY
     || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -121,12 +139,7 @@ async function main() {
   for (const { nftCollection, nftProver } of factoryDeployments) {
     console.log(`\n>>> Collection: ${nftCollection}`);
 
-    const logs = await publicClient.getLogs({
-      address:   nftCollection,
-      event:     parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"),
-      fromBlock: 0n,
-      toBlock:   "latest",
-    });
+    const logs = await fetchAllTransferLogs(publicClient, nftCollection);
 
     const ownerOf: Record<string, string> = {};
     for (const log of logs) {
