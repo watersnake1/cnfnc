@@ -94,14 +94,40 @@ const TRANSFER_EVENT = parseAbiItem(
 
 // Most public RPC endpoints cap eth_getLogs at 10k blocks per request.
 const LOG_CHUNK = 9_000n;
+// Delay between chunks — keeps us under free-tier rate limits (~5 req/s).
+const CHUNK_DELAY_MS = 200;
+// Retry config for transient 429 / server errors.
+const MAX_RETRIES = 5;
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function getLogsWithRetry(
+  publicClient: ReturnType<typeof createPublicClient>,
+  params: Parameters<typeof publicClient.getLogs>[0],
+): Promise<Awaited<ReturnType<typeof publicClient.getLogs>>> {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      return await publicClient.getLogs(params);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const isRateLimit = msg.includes("429") || msg.includes("rate") || msg.includes("too many");
+      if (!isRateLimit || attempt === MAX_RETRIES - 1) throw err;
+      const wait = 1_000 * 2 ** attempt; // 1s, 2s, 4s, 8s, 16s
+      console.warn(`    Rate limited — retrying in ${wait / 1000}s (attempt ${attempt + 1}/${MAX_RETRIES})`);
+      await sleep(wait);
+    }
+  }
+  throw new Error("unreachable");
+}
 
 async function fetchAllTransferLogs(publicClient: ReturnType<typeof createPublicClient>, address: Address) {
   const latest = await publicClient.getBlockNumber();
   const all: Array<{ args: { from: string; to: string; tokenId: bigint } }> = [];
   for (let from = 0n; from <= latest; from += LOG_CHUNK) {
-    const to  = from + LOG_CHUNK - 1n < latest ? from + LOG_CHUNK - 1n : latest;
-    const chunk = await publicClient.getLogs({ address, event: TRANSFER_EVENT, fromBlock: from, toBlock: to });
+    const to    = from + LOG_CHUNK - 1n < latest ? from + LOG_CHUNK - 1n : latest;
+    const chunk = await getLogsWithRetry(publicClient, { address, event: TRANSFER_EVENT, fromBlock: from, toBlock: to });
     for (const log of chunk) all.push(log as never);
+    if (to < latest) await sleep(CHUNK_DELAY_MS); // no delay after the final chunk
   }
   return all;
 }
